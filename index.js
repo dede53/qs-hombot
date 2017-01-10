@@ -1,12 +1,7 @@
 var adapter 		= require('../../adapter-lib.js');
 var request 		= require('request');
 var lastStatus		= {};
-var hombot 		= new adapter({
-	"name": "Hombot",
-	"loglevel": 3,
-	"description": "Speichert den Status eines LG-Hombot mit Wlan-Hack: roboterforum.de",
-	"settingsFile": "hombot.json"
-});
+var hombot 		= new adapter("hombot");
 
 
 
@@ -19,10 +14,16 @@ hombot.settings.hombots.forEach(function(bot){
 var checkStatus = function(){
 	hombot.settings.hombots.forEach(function(bot){
 		request.get({
+			// url:'http://' + bot.ip + ':' + bot.port + '/sites/statistics/status.html'
 			url:'http://' + bot.ip + ':' + bot.port + '/status.html'
 		},function( err, httpResponse, body){
 			if(err){
-				hombot.log.error("Hombot (" + bot.name + ") ist nicht erreichbar!");
+				if(lastStatus[bot.ip].robotstate == err.code){
+					hombot.log.info("Hombot (" + bot.name + ") ist nicht erreichbar!");
+					return;
+				}
+				hombot.setVariable("hombot." + bot.name + ".status", "nicht erreichbar");
+				lastStatus[bot.ip].robotstate = err.code;
 				return;
 			}
 			var body = body.trim();
@@ -33,6 +34,7 @@ var checkStatus = function(){
 			}catch(e){
 				hombot.log.error("JSON kann nicht geparsed werden!");
 				hombot.log.error(e);
+				return;
 			}
 
 			// Keine Statusänderung
@@ -53,10 +55,12 @@ var checkStatus = function(){
 					status = 'Auf dem Heimweg';
 					break;
 				case 'CHARGING':
-					status = 'Lädt';
+					status = 'Lädt ('+ json.battlevel +')';
+					// status = "Lädt ( " + json.battlevel + " )";
+					// status = "/%";
 					break;
 				case 'DOCKING':
-					status = 'Docke an';
+					status = 'Suche die Ladestation';
 					break;
 				case 'STANDBY':
 					status = 'Standby';
@@ -77,4 +81,5 @@ var checkStatus = function(){
 }
 
 hombot.cron("add", 12345332, hombot.settings.cron, checkStatus);
+checkStatus();
 // setInterval(checkStatus, hombot.settings.requesttime * 1000);
