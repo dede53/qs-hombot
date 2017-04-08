@@ -8,5 +8,6 @@
 	],
 	"requesttime": 1,
 	"cron": "/1 * * * * * *",
+	"version":"0.0.1",
 	"loglevel":1
 }
